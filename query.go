@@ -3,6 +3,7 @@ package go_elasticsearch
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/wh5231/go-elasticsearch/uritemplates"
 	"net/url"
 	"strings"
@@ -16,22 +17,25 @@ type Query struct {
 	timeout      string
 	limit        int
 	offset       int
+	source       interface{}
 	where        []interface{}
 	query        []interface{}
 	aggregations map[string]interface{}
 	suggest      map[string]interface{}
+	orderBy      []map[string]string
 	//array options to be appended to the query URL, such as "search_type" for search or "timeout" for delete
 	options map[string]string
 	explain bool
 }
 
-func NewQuery(c *Client, index ...string) *Query {
+func NewQuery(c *Client) *Query {
 	return &Query{
 		client:       c,
 		limit:        10,
 		offset:       0,
 		aggregations: make(map[string]interface{}),
 		suggest:      make(map[string]interface{}),
+		orderBy:      make([]map[string]string, 0),
 		options:      make(map[string]string),
 	}
 }
@@ -53,6 +57,11 @@ func (this *Query) Limit(i int) *Query {
 
 func (this *Query) Offset(i int) *Query {
 	this.offset = i
+	return this
+}
+
+func (this *Query) Source(source interface{}) *Query {
+	this.source = source
 	return this
 }
 
@@ -79,6 +88,15 @@ func (this *Query) OrWhere(condition ...interface{}) *Query {
 		}
 	} else {
 		this.where = append(this.where, []interface{}{"or", condition})
+	}
+	return this
+}
+
+func (this *Query) OrderBy(orderBy ...map[string]string) *Query {
+	if this.orderBy == nil {
+		this.orderBy = orderBy
+	} else {
+		this.orderBy = append(this.orderBy, orderBy...)
 	}
 	return this
 }
@@ -173,11 +191,11 @@ func (this *Query) Do(ctx context.Context) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(string(response.Body))
 	result := new(SearchResult)
-	json.Unmarshal([]byte(response.Body),&result)
+	json.Unmarshal([]byte(response.Body), &result)
 	return result, err
 }
-
 
 type SearchResult struct {
 	Shards struct {
@@ -187,16 +205,16 @@ type SearchResult struct {
 	} `json:"_shards"`
 	Hits struct {
 		Hits []struct {
-			ID     string `json:"_id"`
-			Index  string `json:"_index"`
-			Score  int64  `json:"_score"`
-			Source *json.RawMessage`json:"_source"`
-			Type string `json:"_type"`
+			ID     string           `json:"_id"`
+			Index  string           `json:"_index"`
+			Score  int64            `json:"_score"`
+			Source *json.RawMessage `json:"_source"`
+			Type   string           `json:"_type"`
 		} `json:"hits"`
 		MaxScore int64 `json:"max_score"`
 		Total    int64 `json:"total"`
 	} `json:"hits"`
-	TimedOut bool  `json:"timed_out"`
-	Aggregations *json.RawMessage   `json:"aggregations,omitempty"`      // results from aggregations
-	Took     int64 `json:"took"`
+	TimedOut     bool             `json:"timed_out"`
+	Aggregations *json.RawMessage `json:"aggregations,omitempty"` // results from aggregations
+	Took         int64            `json:"took"`
 }

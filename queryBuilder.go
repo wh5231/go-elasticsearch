@@ -30,6 +30,10 @@ func (this *QueryBuilder)Build(query *Query) (map[string]interface{}, error) {
 		parts["query"] = query.query
 	}
 
+	if query.orderBy != nil{
+		parts["sort"] = query.orderBy
+	}
+
 	if query.aggregations != nil{
 		parts["aggregations"] = query.aggregations
 	}
@@ -86,8 +90,6 @@ func buildQueryFromWhere(condition []interface{}) (map[string]interface{}, error
 	query := map[string]interface{}{"constant_score": map[string]interface{}{"filter": buildCondition}}
 	return query, e
 }
-
-
 
 func main() {
 	//Array
