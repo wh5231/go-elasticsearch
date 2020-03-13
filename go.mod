@@ -1,0 +1,1 @@
+module "github.com/wh5231/go-elasticsearch"
